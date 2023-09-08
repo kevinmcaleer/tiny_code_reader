@@ -31,21 +31,27 @@ last_code_time = 0.0
 
 while True:
     read_data = bytearray(TINY_CODE_READER_I2C_BYTE_COUNT)
-    i2c.readfrom_into(TINY_CODE_READER_I2C_ADDRESS, read_data)
+    try:
+        i2c.readfrom_into(TINY_CODE_READER_I2C_ADDRESS, read_data)
+    
+        message_length,  = struct.unpack_from(TINY_CODE_READER_LENGTH_FORMAT, read_data, TINY_CODE_READER_LENGTH_OFFSET)
+        message_bytes = struct.unpack_from(TINY_CODE_READER_MESSAGE_FORMAT, read_data, TINY_CODE_READER_MESSAGE_OFFSET)
 
-    message_length,  = struct.unpack_from(TINY_CODE_READER_LENGTH_FORMAT, read_data, TINY_CODE_READER_LENGTH_OFFSET)
-    message_bytes = struct.unpack_from(TINY_CODE_READER_MESSAGE_FORMAT, read_data, TINY_CODE_READER_MESSAGE_OFFSET)
-
-    if message_length > 0:
-        message_string = bytearray(message_bytes)[0:message_length].decode("utf-8")
-        is_same = (message_string == last_message_string)
-        last_message_string = message_string
-        current_time = time.time()
-        time_since_last_code = current_time - last_code_time
-        last_code_time = current_time
-        # Debounce the input by making sure there's been a gap in time since we
-        # last saw this code.
-        if (not is_same) or (time_since_last_code > 1.0):
-            print(message_string)
-         
+        if message_length > 0:
+            message_string = ""
+            try:
+                message_string = bytearray(message_bytes)[0:message_length].decode("utf-8")
+            except Error as e:
+                print(f"error: {e}")
+            is_same = (message_string == last_message_string)
+            last_message_string = message_string
+            current_time = time.time()
+            time_since_last_code = current_time - last_code_time
+            last_code_time = current_time
+            # Debounce the input by making sure there's been a gap in time since we
+            # last saw this code.
+            if (not is_same) or (time_since_last_code > 1.0):
+                print(message_string)
+    except OSError:
+        print(".")
             
